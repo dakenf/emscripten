@@ -609,6 +609,7 @@ def func_type_to_sig(type):
 
 def create_em_js(metadata):
   em_js_funcs = []
+  metadata.emJsFuncSignatures = []
   separator = '<::>'
   for name, raw in metadata.emJsFuncs.items():
     assert separator in raw
@@ -621,9 +622,10 @@ def create_em_js(metadata):
     arg_names = [arg.split()[-1].replace('*', '') for arg in args if arg]
     args = ','.join(arg_names)
     func = f'function {name}({args}) {body}'
-    if (settings.MAIN_MODULE or settings.ASYNCIFY == 2) and name in metadata.emJsFuncTypes:
+    if ((settings.MAIN_MODULE or settings.ASYNCIFY == 2) or settings.WASM_BIGINT) and name in metadata.emJsFuncTypes:
       sig = func_type_to_sig(metadata.emJsFuncTypes[name])
       func = func + f'\n{name}.sig = \'{sig}\';'
+      metadata.emJsFuncSignatures[name] = sig
     em_js_funcs.append(func)
 
   return em_js_funcs
@@ -905,10 +907,16 @@ def create_pointer_conversion_wrappers(metadata):
     'emscripten_wasm_worker_initialize': '_p_',
   }
 
-  if settings.SIGNATURE_CONVERSIONS:
-      for function in settings.SIGNATURE_CONVERSIONS:
-        sig = function.split(':')
-        mapping[sig[0]] = sig[1]
+  for func in metadata.emJsFuncSignatures:
+    signature = metadata.emJsFuncSignatures[func]
+    updated_signature = ""
+
+    for char in signature:
+      if char == 'p' or char == 'j':
+        updated_signature += 'P'
+      else:
+        updated_signature += '_'
+    mapping[func] = updated_signature
 
   wrappers = '''
 function applySignatureConversions(exports) {
