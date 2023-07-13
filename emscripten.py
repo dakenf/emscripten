@@ -891,6 +891,10 @@ def create_pointer_conversion_wrappers(metadata):
     '__get_exception_message': '_ppp',
   }
 
+  for function in settings.SIGNATURE_CONVERSIONS:
+    sig = function.split(':')
+    mapping[sig[0]] = sig[1]
+
   wrappers = '''
 function applySignatureConversions(exports) {
   // First, make a copy of the incoming exports object
