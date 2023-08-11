@@ -41,10 +41,11 @@ if (ENVIRONMENT_IS_PTHREAD) {
 #endif // ALLOW_MEMORY_GROWTH
 #if SHARED_MEMORY
       ,
-      'shared': true,
+      'shared': true
 #endif
 #if MEMORY64
-    'index': 'u64',
+      ,
+      'index': 'u64'
 #endif
     });
 #if SHARED_MEMORY
