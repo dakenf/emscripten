@@ -99,7 +99,7 @@ Module['instantiateWasm'] = (info, receiveInstance) => {
 // Turn unhandled rejected promises into errors so that the main thread will be
 // notified about them.
 self.onunhandledrejection = (e) => {
-  throw e.reason ?? e;
+  throw e.reason || e;
 };
 
 function handleMessage(e) {
@@ -265,12 +265,12 @@ function handleMessage(e) {
       // The received message looks like something that should be handled by this message
       // handler, (since there is a e.data.cmd field present), but is not one of the
       // recognized commands:
-      err('worker.js received unknown command ' + e.data.cmd);
+      err(`worker.js received unknown command ${e.data.cmd}`);
       err(e.data);
     }
   } catch(ex) {
 #if ASSERTIONS
-    err('worker.js onmessage() captured an uncaught exception: ' + ex);
+    err(`worker.js onmessage() captured an uncaught exception: ${ex}`);
     if (ex && ex.stack) err(ex.stack);
 #endif
     if (Module['__emscripten_thread_crashed']) {
