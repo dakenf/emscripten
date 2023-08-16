@@ -4145,13 +4145,13 @@ Module["preRun"].push(function () {
     self.run_browser('test2.html', '/report_result?exit:0')
 
   # Test that if the main thread is performing a futex wait while a pthread needs it to do a proxied operation (before that pthread would wake up the main thread), that it's not a deadlock.
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_proxying_in_futex_wait(self):
     self.btest_exit(test_file('pthread/test_pthread_proxying_in_futex_wait.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE'])
 
   # Test that sbrk() operates properly in multithreaded conditions
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_sbrk(self):
     for aborting_malloc in [0, 1]:
@@ -4161,7 +4161,7 @@ Module["preRun"].push(function () {
       self.btest_exit(test_file('pthread/test_pthread_sbrk.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE=8', '-sABORTING_MALLOC=' + str(aborting_malloc), '-DABORTING_MALLOC=' + str(aborting_malloc), '-sINITIAL_MEMORY=128MB'])
 
   # Test that -sABORTING_MALLOC=0 works in both pthreads and non-pthreads builds. (sbrk fails gracefully)
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_gauge_available_memory(self):
     for opts in [[], ['-O2']]:
@@ -4175,13 +4175,13 @@ Module["preRun"].push(function () {
     self.btest_exit(test_file('pthread/test_pthread_run_on_main_thread.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE'])
 
   # Test how a lot of back-to-back called proxying operations behave.
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_run_on_main_thread_flood(self):
     self.btest_exit(test_file('pthread/test_pthread_run_on_main_thread_flood.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE'])
 
   # Test that it is possible to asynchronously call a JavaScript function on the main thread.
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_call_async(self):
     self.btest_exit(test_file('pthread/call_async.c'), args=['-pthread'])
@@ -4225,7 +4225,7 @@ Module["preRun"].push(function () {
   def test_pthread_clock_drift(self):
     self.btest_exit(test_file('pthread/test_pthread_clock_drift.cpp'), args=['-O3', '-pthread', '-sPROXY_TO_PTHREAD'])
 
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_utf8_funcs(self):
     self.btest_exit(test_file('pthread/test_pthread_utf8_funcs.cpp'), args=['-pthread', '-sPTHREAD_POOL_SIZE'])
@@ -4237,19 +4237,19 @@ Module["preRun"].push(function () {
     self.btest_exit(test_file('pthread/test_futex_wake_all.cpp'), args=['-O3', '-pthread', '-sINITIAL_MEMORY=64MB'])
 
   # Test that stack base and max correctly bound the stack on pthreads.
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_stack_bounds(self):
     self.btest_exit(test_file('pthread/test_pthread_stack_bounds.cpp'), args=['-pthread'])
 
   # Test that real `thread_local` works.
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_tls(self):
     self.btest_exit(test_file('pthread/test_pthread_tls.cpp'), args=['-sPROXY_TO_PTHREAD', '-pthread'])
 
   # Test that real `thread_local` works in main thread without PROXY_TO_PTHREAD.
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthread_tls_main(self):
     self.btest_exit(test_file('pthread/test_pthread_tls_main.cpp'), args=['-pthread'])
@@ -4966,7 +4966,7 @@ Module["preRun"].push(function () {
   # program can run either on the main thread (normal tests) or when we start it in
   # a Worker in this test (in that case, both the main application thread and the worker threads
   # are all inside Web Workers).
-  # @also_with_wasm64
+  @also_with_wasm64
   @requires_threads
   def test_pthreads_started_in_worker(self):
     self.set_setting('EXIT_RUNTIME')
