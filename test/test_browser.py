@@ -242,6 +242,11 @@ class browser(BrowserCore):
     # All the browsers we run on support wasm64 (Chrome and Firefox).
     return True
 
+  def require_jspi(self):
+    if not is_chrome():
+      self.skipTest(f'Current browser ({EMTEST_BROWSER}) does not support JSPI. Only chromium-based browsers ({CHROMIUM_BASED_BROWSERS}) support JSPI today.')
+    super(browser, self).require_jspi()
+
   def test_sdl1_in_emscripten_nonstrict_mode(self):
     if 'EMCC_STRICT' in os.environ and int(os.environ['EMCC_STRICT']):
       self.skipTest('This test requires being run in non-strict mode (EMCC_STRICT env. variable unset)')
@@ -380,13 +385,13 @@ If manually bisecting:
 
     # Test subdirectory handling with asset packaging.
     delete_dir('assets')
-    ensure_dir('assets/sub/asset1/'.replace('\\', '/'))
-    ensure_dir('assets/sub/asset1/.git'.replace('\\', '/')) # Test adding directory that shouldn't exist.
-    ensure_dir('assets/sub/asset2/'.replace('\\', '/'))
+    ensure_dir('assets/sub/asset1')
+    ensure_dir('assets/sub/asset1/.git') # Test adding directory that shouldn't exist.
+    ensure_dir('assets/sub/asset2')
     create_file('assets/sub/asset1/file1.txt', '''load me right before running the code please''')
     create_file('assets/sub/asset1/.git/shouldnt_be_embedded.txt', '''this file should not get embedded''')
     create_file('assets/sub/asset2/file2.txt', '''load me right before running the code please''')
-    absolute_assets_src_path = 'assets'.replace('\\', '/')
+    absolute_assets_src_path = 'assets'
 
     def make_main_two_files(path1, path2, nonexistingpath):
       create_file('main.cpp', r'''
@@ -1498,6 +1503,7 @@ keydown(100);keyup(100); // trigger the end
     self.run_process([FILE_PACKAGER, 'more.data', '--preload', 'data.dat', '--separate-metadata', '--js-output=more.js'])
     self.btest(Path('browser/separate_metadata_later.cpp'), '1', args=['-sFORCE_FILESYSTEM'])
 
+  @also_with_wasm64
   def test_idbstore(self):
     secret = str(time.time())
     for stage in [0, 1, 2, 3, 0, 1, 2, 0, 0, 1, 4, 2, 5]:
@@ -1506,9 +1512,20 @@ keydown(100);keyup(100); // trigger the end
                       args=['-lidbstore.js', f'-DSTAGE={stage}', f'-DSECRET="{secret}"'],
                       output_basename=f'idbstore_{stage}')
 
-  def test_idbstore_sync(self):
+  @parameterized({
+      'asyncify': (1, False),
+      'asyncify_wasm64': (1, True),
+      'jspi': (2, False),
+  })
+  def test_idbstore_sync(self, asyncify, wasm64):
+    if wasm64:
+      self.require_wasm64()
+      self.set_setting('MEMORY64')
+      self.emcc_args.append('-Wno-experimental')
+    if asyncify == 2:
+      self.require_jspi()
     secret = str(time.time())
-    self.btest(test_file('browser/test_idbstore_sync.c'), '6', args=['-lidbstore.js', f'-DSECRET="{secret}"', '-O3', '-g2', '-sASYNCIFY'])
+    self.btest(test_file('browser/test_idbstore_sync.c'), '6', args=['-lidbstore.js', f'-DSECRET="{secret}"', '-O3', '-g2', '-sASYNCIFY=' + str(asyncify)])
 
   def test_idbstore_sync_worker(self):
     secret = str(time.time())
@@ -2636,7 +2653,8 @@ Module["preRun"].push(function () {
   @parameterized({
     '': ([],),
     'closure': (['-O2', '-g1', '--closure=1', '-sHTML5_SUPPORT_DEFERRING_USER_SENSITIVE_REQUESTS=0'],),
-    'pthread': (['-pthread', '-sPROXY_TO_PTHREAD'],),
+    'pthread': (['-pthread'],),
+    'proxy_to_pthread': (['-pthread', '-sPROXY_TO_PTHREAD'],),
     'legacy': (['-sMIN_FIREFOX_VERSION=0', '-sMIN_SAFARI_VERSION=0', '-sMIN_IE_VERSION=0', '-sMIN_EDGE_VERSION=0', '-sMIN_CHROME_VERSION=0', '-Wno-transpile'],)
   })
   @requires_threads
@@ -3820,7 +3838,7 @@ Module["preRun"].push(function () {
 
   # Test that the emscripten_ atomics api functions work.
   @parameterized({
-    'normal': ([],),
+    '': ([],),
     'closure': (['--closure=1'],),
   })
   @requires_threads
@@ -4127,11 +4145,13 @@ Module["preRun"].push(function () {
     self.run_browser('test2.html', '/report_result?exit:0')
 
   # Test that if the main thread is performing a futex wait while a pthread needs it to do a proxied operation (before that pthread would wake up the main thread), that it's not a deadlock.
+  @also_with_wasm64
   @requires_threads
   def test_pthread_proxying_in_futex_wait(self):
     self.btest_exit(test_file('pthread/test_pthread_proxying_in_futex_wait.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE'])
 
   # Test that sbrk() operates properly in multithreaded conditions
+  @also_with_wasm64
   @requires_threads
   def test_pthread_sbrk(self):
     for aborting_malloc in [0, 1]:
@@ -4141,6 +4161,7 @@ Module["preRun"].push(function () {
       self.btest_exit(test_file('pthread/test_pthread_sbrk.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE=8', '-sABORTING_MALLOC=' + str(aborting_malloc), '-DABORTING_MALLOC=' + str(aborting_malloc), '-sINITIAL_MEMORY=128MB'])
 
   # Test that -sABORTING_MALLOC=0 works in both pthreads and non-pthreads builds. (sbrk fails gracefully)
+  @also_with_wasm64
   @requires_threads
   def test_pthread_gauge_available_memory(self):
     for opts in [[], ['-O2']]:
@@ -4154,11 +4175,13 @@ Module["preRun"].push(function () {
     self.btest_exit(test_file('pthread/test_pthread_run_on_main_thread.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE'])
 
   # Test how a lot of back-to-back called proxying operations behave.
+  @also_with_wasm64
   @requires_threads
   def test_pthread_run_on_main_thread_flood(self):
     self.btest_exit(test_file('pthread/test_pthread_run_on_main_thread_flood.cpp'), args=['-O3', '-pthread', '-sPTHREAD_POOL_SIZE'])
 
   # Test that it is possible to asynchronously call a JavaScript function on the main thread.
+  @also_with_wasm64
   @requires_threads
   def test_pthread_call_async(self):
     self.btest_exit(test_file('pthread/call_async.c'), args=['-pthread'])
@@ -4202,6 +4225,7 @@ Module["preRun"].push(function () {
   def test_pthread_clock_drift(self):
     self.btest_exit(test_file('pthread/test_pthread_clock_drift.cpp'), args=['-O3', '-pthread', '-sPROXY_TO_PTHREAD'])
 
+  @also_with_wasm64
   @requires_threads
   def test_pthread_utf8_funcs(self):
     self.btest_exit(test_file('pthread/test_pthread_utf8_funcs.cpp'), args=['-pthread', '-sPTHREAD_POOL_SIZE'])
@@ -4213,16 +4237,19 @@ Module["preRun"].push(function () {
     self.btest_exit(test_file('pthread/test_futex_wake_all.cpp'), args=['-O3', '-pthread', '-sINITIAL_MEMORY=64MB'])
 
   # Test that stack base and max correctly bound the stack on pthreads.
+  @also_with_wasm64
   @requires_threads
   def test_pthread_stack_bounds(self):
     self.btest_exit(test_file('pthread/test_pthread_stack_bounds.cpp'), args=['-pthread'])
 
   # Test that real `thread_local` works.
+  @also_with_wasm64
   @requires_threads
   def test_pthread_tls(self):
     self.btest_exit(test_file('pthread/test_pthread_tls.cpp'), args=['-sPROXY_TO_PTHREAD', '-pthread'])
 
   # Test that real `thread_local` works in main thread without PROXY_TO_PTHREAD.
+  @also_with_wasm64
   @requires_threads
   def test_pthread_tls_main(self):
     self.btest_exit(test_file('pthread/test_pthread_tls_main.cpp'), args=['-pthread'])
@@ -4256,6 +4283,8 @@ Module["preRun"].push(function () {
   def test_pthread_asan_use_after_free(self):
     self.btest(test_file('pthread/test_pthread_asan_use_after_free.cpp'), expected='1', args=['-fsanitize=address', '-sINITIAL_MEMORY=256MB', '-pthread', '-sPROXY_TO_PTHREAD', '--pre-js', test_file('pthread/test_pthread_asan_use_after_free.js')])
 
+  @no_firefox('https://github.com/emscripten-core/emscripten/issues/20006')
+  @also_with_wasmfs
   @requires_threads
   def test_pthread_asan_use_after_free_2(self):
     # similiar to test_pthread_asan_use_after_free, but using a pool instead
@@ -4937,6 +4966,7 @@ Module["preRun"].push(function () {
   # program can run either on the main thread (normal tests) or when we start it in
   # a Worker in this test (in that case, both the main application thread and the worker threads
   # are all inside Web Workers).
+  @also_with_wasm64
   @requires_threads
   def test_pthreads_started_in_worker(self):
     self.set_setting('EXIT_RUNTIME')

@@ -12,6 +12,14 @@ class Test {
   int function_four(bool x) { return 2; }
 
   int const_fn() const { return 0; }
+
+  int getX() const { return x; }
+  void setX(int x_) { x = x_; }
+
+  static int static_function(int x) { return 1; }
+
+private:
+  int x;
 };
 
 Test class_returning_fn() { return Test(); }
@@ -77,6 +85,8 @@ EMSCRIPTEN_BINDINGS(Test) {
       .function("functionThree", &Test::function_three)
       .function("functionFour", &Test::function_four)
       .function("constFn", &Test::const_fn)
+      .property("x", &Test::getX, &Test::setX)
+      .class_function("staticFunction", &Test::static_function)
 	;
 
   function("class_returning_fn", &class_returning_fn);

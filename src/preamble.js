@@ -53,7 +53,6 @@ if (typeof WebAssembly != 'object') {
 // Wasm globals
 
 var wasmMemory;
-var wasmExports;
 
 #if SHARED_MEMORY
 // For sending to workers.
@@ -393,7 +392,7 @@ function addRunDependency(id) {
             shown = true;
             err('still waiting on run dependencies:');
           }
-          err('dependency: ' + dep);
+          err(`dependency: ${dep}`);
         }
         if (shown) {
           err('(end of list)');
@@ -718,7 +717,7 @@ var splitModuleProxyHandler = {
 #if ASYNCIFY == 2
       throw new Error('Placeholder function "' + prop + '" should not be called when using JSPI.');
 #else
-      err('placeholder function called: ' + prop);
+      err(`placeholder function called: ${prop}`);
       var imports = {'primary': wasmExports};
       // Replace '.wasm' suffix with '.deferred.wasm'.
       var deferred = wasmBinaryFile.slice(0, -5) + '.deferred.wasm'
@@ -765,7 +764,7 @@ function instantiateSync(file, info) {
       try {
         module = v8.deserialize(fs.readFileSync(cachedCodeFile));
       } catch (e) {
-        err('NODE_CODE_CACHING: failed to deserialize, bad cache file? (' + cachedCodeFile + ')');
+        err(`NODE_CODE_CACHING: failed to deserialize, bad cache file? (${cachedCodeFile})`);
         // Save the new compiled code when we have it.
         hasCached = false;
       }
@@ -824,7 +823,7 @@ function instantiateArrayBuffer(binaryFile, imports, receiver) {
 #endif
     return instance;
   }).then(receiver, (reason) => {
-    err('failed to asynchronously prepare wasm: ' + reason);
+    err(`failed to asynchronously prepare wasm: ${reason}`);
 
 #if WASM == 2
 #if ENVIRONMENT_MAY_BE_NODE || ENVIRONMENT_MAY_BE_SHELL
@@ -847,7 +846,7 @@ function instantiateArrayBuffer(binaryFile, imports, receiver) {
 #if ASSERTIONS
     // Warn on some common problems.
     if (isFileURI(wasmBinaryFile)) {
-      err('warning: Loading from a file URI (' + wasmBinaryFile + ') is not supported in most browsers. See https://emscripten.org/docs/getting_started/FAQ.html#how-do-i-run-a-local-webserver-for-testing-why-does-my-program-stall-in-downloading-or-preparing');
+      err(`warning: Loading from a file URI (${wasmBinaryFile}) is not supported in most browsers. See https://emscripten.org/docs/getting_started/FAQ.html#how-do-i-run-a-local-webserver-for-testing-why-does-my-program-stall-in-downloading-or-preparing`);
     }
 #endif
     abort(reason);
@@ -908,14 +907,14 @@ function instantiateAsync(binary, binaryFile, imports, callback) {
               wasmOffsetConverter = new WasmOffsetConverter(new Uint8Array(arrayBufferResult), instantiationResult.module);
               callback(instantiationResult);
             },
-            (reason) => err('failed to initialize offset-converter: ' + reason)
+            (reason) => err(`failed to initialize offset-converter: ${reason}`)
           );
         },
 #endif
         function(reason) {
           // We expect the most common failure cause to be a bad MIME type for the binary,
           // in which case falling back to ArrayBuffer instantiation should work.
-          err('wasm streaming compile failed: ' + reason);
+          err(`wasm streaming compile failed: ${reason}`);
           err('falling back to ArrayBuffer instantiation');
           return instantiateArrayBuffer(binaryFile, imports, callback);
         });
@@ -1041,7 +1040,7 @@ function createWasm() {
 #if !DECLARE_ASM_MODULE_EXPORTS
     // If we didn't declare the asm exports as top level enties this function
     // is in charge of programatically exporting them on the global object.
-    exportAsmFunctions(exports);
+    exportWasmSymbols(exports);
 #endif
 
 #if PTHREADS || WASM_WORKERS
@@ -1113,7 +1112,7 @@ function createWasm() {
     try {
       return Module['instantiateWasm'](info, receiveInstance);
     } catch(e) {
-      err('Module.instantiateWasm callback failed with error: ' + e);
+      err(`Module.instantiateWasm callback failed with error: ${e}`);
       #if MODULARIZE
         // If instantiation fails, reject the module ready promise.
         readyPromiseReject(e);

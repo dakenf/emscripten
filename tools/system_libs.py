@@ -1058,6 +1058,7 @@ class libc(MuslInternalLibrary,
           'library_pthread.c',
           'em_task_queue.c',
           'proxying.c',
+          'proxying_legacy.c',
           'thread_mailbox.c',
           'pthread_create.c',
           'pthread_kill.c',
@@ -1171,7 +1172,7 @@ class libc(MuslInternalLibrary,
 
     libc_files += files_in_path(
         path='system/lib/libc/musl/src/exit',
-        filenames=['_Exit.c', 'atexit.c'])
+        filenames=['_Exit.c', 'atexit.c', 'at_quick_exit.c', 'quick_exit.c'])
 
     libc_files += files_in_path(
         path='system/lib/libc/musl/src/ldso',
@@ -1379,6 +1380,11 @@ class libwasm_workers(MTLibrary):
     return files_in_path(
         path='system/lib/wasm_worker',
         filenames=['library_wasm_worker.c' if self.is_ww or self.is_mt else 'library_wasm_worker_stub.c'])
+
+  def can_use(self):
+    # see src/library_wasm_worker.js
+    return super().can_use() and not settings.SINGLE_FILE \
+      and not settings.RELOCATABLE and not settings.PROXY_TO_WORKER
 
 
 class libsockets(MuslInternalLibrary, MTLibrary):

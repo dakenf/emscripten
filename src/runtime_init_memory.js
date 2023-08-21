@@ -43,6 +43,10 @@ if (ENVIRONMENT_IS_PTHREAD) {
       ,
       'shared': true
 #endif
+#if MEMORY64
+      ,
+      'index': 'u64'
+#endif
     });
 #if SHARED_MEMORY
     if (!(wasmMemory.buffer instanceof SharedArrayBuffer)) {
