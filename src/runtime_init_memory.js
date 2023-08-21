@@ -47,6 +47,10 @@ if (ENVIRONMENT_IS_PTHREAD) {
       ,
       'index': 'u64'
 #endif
+#if MEMORY64 == 1
+      ,
+      'index': 'u64'
+#endif
     });
 #if SHARED_MEMORY
     if (!(wasmMemory.buffer instanceof SharedArrayBuffer)) {
